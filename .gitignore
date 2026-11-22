@@ -15,7 +15,7 @@ htmlcov/
 
 # Runtime data / local saves
 game_stats.json
-*.sqlite3
+web/leaderboard.sqlite3
 *.sqlite3-wal
 *.sqlite3-shm
 

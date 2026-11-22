@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#d8613c" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>2048 Remix Web</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="shell">
+    <header class="top">
+      <h1>2048 Remix</h1>
+      <p>Keyboard on desktop, swipe on mobile</p>
+    </header>
+
+    <section class="hud">
+      <div class="chip">
+        <span>SCORE</span>
+        <strong id="score">0</strong>
+      </div>
+      <div class="chip">
+        <span>COMBO</span>
+        <strong id="combo">x1.0</strong>
+      </div>
+      <div class="chip">
+        <span>STEPS</span>
+        <strong id="steps">0</strong>
+      </div>
+      <div class="chip">
+        <span>BEST</span>
+        <strong id="best">0</strong>
+      </div>
+    </section>
+
+    <section class="controls">
+      <label>
+        Grid
+        <select id="gridSize">
+          <option value="4">4x4</option>
+          <option value="5">5x5</option>
+          <option value="6">6x6</option>
+        </select>
+      </label>
+      <label>
+        Mode
+        <select id="mode">
+          <option value="Classic">Classic</option>
+          <option value="Timed">Timed</option>
+          <option value="Steps">Steps</option>
+          <option value="Daily">Daily</option>
+        </select>
+      </label>
+      <button id="themeBtn" type="button">Theme</button>
+      <button id="restartBtn" type="button">Restart</button>
+      <button id="undoBtn" type="button">Undo</button>
+      <button id="pauseBtn" type="button">Pause</button>
+      <button id="muteBtn" type="button">Mute Off</button>
+      <button id="installBtn" type="button" class="hidden">Install App</button>
+    </section>
+
+    <section class="tools">
+      <button id="hammerBtn" type="button">Hammer (2)</button>
+      <button id="freezeBtn" type="button">Freeze (2)</button>
+      <div id="toolStatus">Tools ready</div>
+    </section>
+
+    <section id="modeStatus" class="mode-status">Mode: Classic</section>
+
+    <section class="tasks-panel">
+      <h2>Tasks</h2>
+      <ul id="tasks"></ul>
+    </section>
+
+    <section class="leaderboard-panel">
+      <h2>Leaderboard</h2>
+      <div class="cloud-bar">
+        <label>
+          Player
+          <input id="playerName" type="text" maxlength="18" placeholder="Your name" />
+        </label>
+        <span id="cloudStatus" class="cloud-status">Cloud: offline fallback</span>
+      </div>
+      <div class="leaderboard-grid">
+        <div>
+          <h3>Daily Top 5 (Merged)</h3>
+          <ol id="dailyBoard"></ol>
+        </div>
+        <div>
+          <h3>All-Time Top 5 (Merged)</h3>
+          <ol id="allTimeBoard"></ol>
+        </div>
+      </div>
+    </section>
+
+    <section class="board-wrap">
+      <div id="board" class="board" aria-label="Game board"></div>
+      <div id="pauseMask" class="pause-mask hidden">PAUSED</div>
+    </section>
+
+    <footer class="hint">
+      <span>Desktop: Arrow keys, H/F/U/R/P/M</span>
+      <span>Mobile: Swipe to move, tap tile for tool use</span>
+      <span class="hint-links"><a href="privacy.html">Privacy</a> | <a href="terms.html">Terms</a></span>
+    </footer>
+  </main>
+
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

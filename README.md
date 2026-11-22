@@ -1,51 +1,74 @@
-# 2048 Remix
+# 2048 Remix (Refactored)
 
-A modular 2048 game project with a Python desktop implementation, a browser-based version, and an Android packaging scaffold.
+A modular Tkinter-based 2048 variant with tools, tasks, themes, multiple modes, daily challenge seed, and undo.
 
-## Project components
+## Quick Start
 
-- **Python desktop game** — Tkinter-based game with multiple modes, themes, tasks, tools, undo, and daily challenges.
-- **Web game** — browser client in `web/`, with an optional leaderboard API.
-- **Android wrapper** — Capacitor project scaffold in `android-wrapper/`.
+Run the game:
 
-## Run the Python game
-
-Python 3.10+ is recommended.
-
-```bash
+```powershell
 python app.py
 ```
 
-Run the logic regression tests:
+Run logic regression tests:
 
-```bash
+```powershell
 python test_game_logic.py
 ```
 
-## Run the web version
+## Project Structure
 
-From the repository root:
+- `app.py`: App entrypoint.
+- `game_main_controller.py`: Main controller class wiring UI/services/engine together.
+- `game_controller.py`: Bridge that exposes `Game2048` from the standard controller file.
+- `legacy_launcher.py`: Legacy compatibility launcher.
+- `game_view.py`: UI rendering and animation helpers.
+- `game_engine.py`: Lock-aware movement, merge scoring, game-over checks.
+- `game_task_service.py`: Task generation, status, evaluation, rewards.
+- `game_mode_service.py`: Mode switching, timer, daily seed, pause handling.
+- `game_tool_service.py`: Hammer/freeze/mute interactions.
+- `game_session_service.py`: Milestones, notifications, end-game summary flow.
+- `game_state.py`: Snapshot and restore for undo/session continuity.
+- `game_persistence.py`: Best-score persistence.
+- `game_rules.py`: Core row-level gameplay helpers and task templates.
+- `game_style.py`: Themes, palettes, fonts, UI constants.
+- `test_game_logic.py`: Minimal automated logic checks.
 
-```bash
+## Notes
+
+- Daily mode uses date-based deterministic random seed.
+- Best score is stored in `game_stats.json` in the same directory.
+- `app.py` is the recommended launch command.
+- `legacy_launcher.py` is kept as a backward-compatible launcher for older shortcuts/workflows.
+
+## Web Version
+
+Run web client:
+
+```powershell
 python -m http.server 8080
 ```
 
-Then open http://localhost:8080/web/.
+Open:
 
-The optional leaderboard API is started with:
+- http://localhost:8080/web/
 
-```bash
+Optional online leaderboard API:
+
+```powershell
 python web/leaderboard_server.py
 ```
 
-## Android
+Deployment helper file:
 
-See [ANDROID_RELEASE_GUIDE.md](ANDROID_RELEASE_GUIDE.md) for the Android release workflow and [scripts/setup_android_wrapper.ps1](scripts/setup_android_wrapper.ps1) for the setup helper.
+- `render.yaml` (API service blueprint)
 
-## Repository hygiene
+Launch planning:
 
-Local virtual environments, dependency caches, build output, local saves, and SQLite runtime databases should not be committed. See [\.gitignore](.gitignore).
+- `LAUNCH_CHECKLIST.md` (remaining work, priorities, and time estimate)
 
-## Current status
+Android packaging and release:
 
-This repository is being prepared for its initial source import. Features and release targets should be considered in-development until verified by CI and a packaged build.
+- `ANDROID_RELEASE_GUIDE.md` (Android-only publish path)
+- `scripts/setup_android_wrapper.ps1` (one-command Capacitor Android wrapper setup)
+- `android-wrapper/` (Capacitor project scaffold)

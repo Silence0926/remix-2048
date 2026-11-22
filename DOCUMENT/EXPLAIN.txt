@@ -1,0 +1,89 @@
+下面按“你现在这项目”给你讲最实用版本。
+
+一、Android Studio 签名（生成可上架 AAB）
+
+打开工程
+在 Android Studio 打开 android 工程，等 Gradle 同步完成。
+
+进入打包向导
+菜单：Build > Generate Signed Bundle / APK
+
+选择产物类型
+选 Android App Bundle（上架 Google Play 推荐，文件后缀是 .aab）。
+
+配置签名证书（Keystore）
+如果第一次上架，点 Create new... 创建：
+
+Key store path：证书文件保存位置（例如 .jks）
+Password：keystore 密码
+Key alias：密钥别名
+Key password：该别名对应密码
+Validity (years)：建议长一些（例如 25+）
+Name/Organization/Country：按真实信息填写
+选择构建变体
+选 release，Finish 后生成 .aab。
+
+证书管理要点（非常重要）
+
+keystore 和密码丢了，后续更新会非常麻烦甚至无法更新同包名应用。
+一定离线备份至少 2 份（不同位置）。
+包名一旦发布基本不能改（例如 com.remix2048.game）。
+二、Play Console 提交流程（上架后台）
+
+创建应用
+进入 Play Console，Create app：
+应用名
+默认语言
+是否免费（免费后通常不能改收费）
+完成合规信息（首次最花时间）
+至少要填这些：
+App content：
+隐私政策链接（你需要一个可公网访问 URL）
+Data safety（收集了什么数据、用途）
+Content rating（问卷）
+Target audience
+Ads declaration（是否含广告）
+App access（若有登录才需要）
+Store listing：
+标题、短描述、长描述
+图标、截图、Feature Graphic
+启用 Play App Signing（推荐）
+Google 会引导你启用。一般建议开启，方便后续密钥管理和安全更新。
+
+上传 AAB 到测试轨道
+先走 Internal testing（最快）：
+
+Create release
+上传 .aab
+填 release notes
+Save / Review / Rollout
+安装测试并修问题
+邀请测试账号，手机安装测试版本，重点看：
+首次启动是否正常
+联网/离线是否正常
+排行榜 API 是否可达
+崩溃、卡死、白屏、权限弹窗问题
+逐步发布
+内部测试稳定后再进 Closed testing 或直接 Production。
+生产建议 staged rollout（比如 10% -> 50% -> 100%）。
+三、你这个项目最关键的上架注意点
+
+先把生产 API 地址写好
+config.js 必须指向线上 https://.../api，不要是 localhost。
+
+隐私政策链接要公网可访问
+你已经有隐私和条款页面内容了，但要部署成公开 URL 填到 Play Console。
+
+先内测再生产
+尤其你有在线排行榜功能，先跑内部测试能避免首发翻车。
+
+四、常见卡点与解决
+
+AAB 上传失败：版本号重复
+提高 versionCode（每次发布必须递增）。
+包名冲突或不合规
+发布后不要改包名；改了就是新应用。
+Data Safety 审核被打回
+你声明内容要和实际一致（昵称、分数、clientId 等）。
+安装后请求不到接口
+检查 API 是否 HTTPS、是否跨域允许、域名是否可公网访问。

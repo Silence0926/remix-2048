@@ -1,0 +1,21 @@
+{
+  "name": "remix2048-android-wrapper",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Android wrapper for 2048 Remix Web using Capacitor",
+  "scripts": {
+    "add:android": "cap add android",
+    "sync": "cap sync android",
+    "copy": "cap copy android",
+    "open": "cap open android",
+    "build:aab:help": "echo Open Android Studio with: npm run open"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.2.0",
+    "@capacitor/core": "^7.2.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.2.0",
+    "typescript": "^5.9.2"
+  }
+}

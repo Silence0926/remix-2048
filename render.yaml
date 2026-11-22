@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: remix2048-leaderboard-api
+    runtime: python
+    plan: free
+    buildCommand: "python -m pip install --upgrade pip"
+    startCommand: "python web/leaderboard_server.py"
+    envVars:
+      - key: LEADERBOARD_DB_FILE
+        value: /tmp/remix2048_leaderboard.sqlite3
+      - key: CORS_ALLOW_ORIGIN
+        value: "*"
