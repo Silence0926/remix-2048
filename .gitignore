@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyd
+.Python
+.venv/
+venv/
+env/
+ENV/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Runtime data / local saves
+game_stats.json
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+
+# Node / Capacitor
+node_modules/
+android-wrapper/node_modules/
+android-wrapper/.gradle/
+android-wrapper/android/.gradle/
+android-wrapper/android/**/build/
+android-wrapper/android/local.properties
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Secrets
+.env
+.env.*
+!.env.example
