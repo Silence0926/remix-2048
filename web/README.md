@@ -84,7 +84,8 @@ Server env vars supported:
 
 - `HOST` (default: `0.0.0.0`)
 - `PORT` (default: `8787`)
-- `LEADERBOARD_DB_FILE` (default: `web/leaderboard.sqlite3`)
+- `DATABASE_URL` (optional; when set, the API uses PostgreSQL; Render Blueprint marks this as a secret/manual value)
+- `LEADERBOARD_DB_FILE` (SQLite fallback path; default: `web/leaderboard.sqlite3`)
 - `LEADERBOARD_DATA_FILE` (optional legacy JSON path, used only for first-run migration)
 - `CORS_ALLOW_ORIGINS` (comma-separated exact origins; defaults to `https://silence0926.github.io`)
 - `CORS_ALLOW_ORIGIN` (legacy single-origin setting; defaults to the published Pages origin)
@@ -93,7 +94,8 @@ Server env vars supported:
 Deployment storage warning:
 
 - The current `render.yaml` uses `/tmp/remix2048_leaderboard.sqlite3` for a free Render web service. This is suitable only for a temporary beta: the filesystem is ephemeral and leaderboard data can be lost when the service restarts or redeploys.
-- Do not treat this as production-persistent storage. Before inviting players to rely on global rankings, attach a persistent database (preferably managed PostgreSQL) and migrate the API storage layer, or use a paid persistent disk with an explicit backup plan. No paid database or hosting resource is provisioned by this repository.
+- Do not treat this as production-persistent storage. The API now supports PostgreSQL through `DATABASE_URL`; configure a managed PostgreSQL connection string in the hosting dashboard to enable it. Without that variable, the API deliberately falls back to SQLite.
+- No database or paid hosting resource is provisioned by this repository. Confirm the provider's current free-tier limits, backups, and inactivity policies before using it for a public leaderboard.
 
 Online API protections:
 
@@ -103,6 +105,7 @@ Online API protections:
 - Server-generated submission timestamps for duplicate checks
 - Exact-origin CORS allowlist; configure additional trusted web origins through `CORS_ALLOW_ORIGINS`
 - SQLite busy timeout and WAL mode for better local concurrency
+- PostgreSQL mode when `DATABASE_URL` is configured; schema and indexes are initialized automatically
 
 These controls reduce accidental abuse; they do not make client-submitted scores cheat-proof. A fully authoritative anti-cheat system would require server-side game/replay validation.
 
