@@ -3,10 +3,12 @@ services:
     name: remix2048-leaderboard-api
     runtime: python
     plan: free
-    buildCommand: "python -m pip install --upgrade pip"
+    buildCommand: "python -m pip install --upgrade pip && python -m pip install -r requirements.txt"
     startCommand: "python web/leaderboard_server.py"
     envVars:
       - key: LEADERBOARD_DB_FILE
         value: /tmp/remix2048_leaderboard.sqlite3
       - key: CORS_ALLOW_ORIGINS
         value: "https://silence0926.github.io"
+      - key: DATABASE_URL
+        sync: false
