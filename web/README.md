@@ -86,14 +86,25 @@ Server env vars supported:
 - `PORT` (default: `8787`)
 - `LEADERBOARD_DB_FILE` (default: `web/leaderboard.sqlite3`)
 - `LEADERBOARD_DATA_FILE` (optional legacy JSON path, used only for first-run migration)
-- `CORS_ALLOW_ORIGIN` (default: `*`)
+- `CORS_ALLOW_ORIGINS` (comma-separated exact origins; defaults to `https://silence0926.github.io`)
+- `CORS_ALLOW_ORIGIN` (legacy single-origin setting; defaults to the published Pages origin)
 - `ADMIN_API_KEY` (optional; enables admin endpoints when set)
+
+Deployment storage warning:
+
+- The current `render.yaml` uses `/tmp/remix2048_leaderboard.sqlite3` for a free Render web service. This is suitable only for a temporary beta: the filesystem is ephemeral and leaderboard data can be lost when the service restarts or redeploys.
+- Do not treat this as production-persistent storage. Before inviting players to rely on global rankings, attach a persistent database (preferably managed PostgreSQL) and migrate the API storage layer, or use a paid persistent disk with an explicit backup plan. No paid database or hosting resource is provisioned by this repository.
 
 Online API protections:
 
-- Per-client cooldown: one submit every 5 seconds
+- Per-client cooldown: one submit every 5 seconds, keyed by remote address and client ID
 - Duplicate suppression: same run payload within 60 seconds is ignored
-- Input sanitization and range clamping for score/steps/size/name
+- Request body limit (16 KB), JSON/type validation, and input sanitization
+- Server-generated submission timestamps for duplicate checks
+- Exact-origin CORS allowlist; configure additional trusted web origins through `CORS_ALLOW_ORIGINS`
+- SQLite busy timeout and WAL mode for better local concurrency
+
+These controls reduce accidental abuse; they do not make client-submitted scores cheat-proof. A fully authoritative anti-cheat system would require server-side game/replay validation.
 
 API notes:
 
