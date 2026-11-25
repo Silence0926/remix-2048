@@ -138,6 +138,8 @@ At least one valid filter is required for cleanup.
 
 After API is live, point your web app to that URL using either `?api=` or `web/config.js`.
 
+For the recommended PostgreSQL + Render setup, follow the root-level [DATABASE_SETUP.md](../DATABASE_SETUP.md) guide.
+
 ## Android Packaging
 
 Android wrapper scaffold is prepared in `android-wrapper/`.
