@@ -20,7 +20,7 @@ HOST = os.getenv("HOST", "0.0.0.0")
 PORT = int(os.getenv("PORT", "8787"))
 DB_FILE = os.getenv("LEADERBOARD_DB_FILE", os.path.join(os.path.dirname(__file__), "leaderboard.sqlite3"))
 LEGACY_JSON_FILE = os.getenv("LEADERBOARD_DATA_FILE", os.path.join(os.path.dirname(__file__), "leaderboard_data.json"))
-CORS_ALLOW_ORIGIN = os.getenv("CORS_ALLOW_ORIGIN", "*")
+CORS_ALLOW_ORIGINS = {origin.strip() for origin in os.getenv("CORS_ALLOW_ORIGINS", os.getenv("CORS_ALLOW_ORIGIN", "https://silence0926.github.io")).split(",") if origin.strip()}
 ADMIN_API_KEY = os.getenv("ADMIN_API_KEY", "").strip()
 MAX_STORE = 200
 MAX_RETURN = 5
@@ -43,12 +43,16 @@ def today_seed() -> int:
 
 
 def get_connection() -> sqlite3.Connection:
-    return sqlite3.connect(DB_FILE, timeout=10)
+    conn = sqlite3.connect(DB_FILE, timeout=10)
+    conn.execute("PRAGMA busy_timeout = 10000")
+    return conn
 
 
 def ensure_db() -> None:
-    os.makedirs(os.path.dirname(DB_FILE), exist_ok=True)
+    db_directory = os.path.dirname(os.path.abspath(DB_FILE))
+    os.makedirs(db_directory, exist_ok=True)
     with get_connection() as conn:
+        conn.execute("PRAGMA journal_mode = WAL")
         conn.execute(
             """
             CREATE TABLE IF NOT EXISTS leaderboard_entries (
@@ -409,12 +413,20 @@ class LeaderboardHandler(BaseHTTPRequestHandler):
         except (TypeError, ValueError):
             return fallback
 
+    def _origin_allowed(self) -> bool:
+        origin = (self.headers.get("Origin") or "").strip()
+        return not origin or "*" in CORS_ALLOW_ORIGINS or origin in CORS_ALLOW_ORIGINS
+
     def _send(self, status: int, payload: dict):
         body = json.dumps(payload, ensure_ascii=True).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
-        self.send_header("Access-Control-Allow-Origin", CORS_ALLOW_ORIGIN)
+        self.send_header("Cache-Control", "no-store")
+        origin = (self.headers.get("Origin") or "").strip()
+        if origin and self._origin_allowed():
+            self.send_header("Access-Control-Allow-Origin", "*" if "*" in CORS_ALLOW_ORIGINS else origin)
+            self.send_header("Vary", "Origin")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type, X-Admin-Key")
         self.end_headers()
@@ -423,12 +435,16 @@ class LeaderboardHandler(BaseHTTPRequestHandler):
     def _parse_json_body(self) -> tuple[dict | None, str | None]:
         try:
             length = int(self.headers.get("Content-Length", "0"))
+            if length < 0:
+                return None, "invalid content length"
+            if length > 16384:
+                return None, "request body too large"
             raw = self.rfile.read(length)
             payload = json.loads(raw.decode("utf-8") or "{}")
             if not isinstance(payload, dict):
                 return None, "payload must be object"
             return payload, None
-        except (ValueError, json.JSONDecodeError):
+        except (ValueError, UnicodeDecodeError, json.JSONDecodeError):
             return None, "invalid json"
 
     def _admin_auth_ok(self, payload: dict | None = None) -> bool:
@@ -449,13 +465,26 @@ class LeaderboardHandler(BaseHTTPRequestHandler):
         return True
 
     def do_OPTIONS(self):
+        if not self._origin_allowed():
+            self._send(403, {"ok": False, "error": "origin not allowed"})
+            return
         self._send(200, {"ok": True})
 
     def do_GET(self):
+        if not self._origin_allowed():
+            self._send(403, {"ok": False, "error": "origin not allowed"})
+            return
         parsed = urlparse(self.path)
         if parsed.path == "/api/health":
-            self._send(200, {
-                "ok": True,
+            try:
+                with get_connection() as conn:
+                    conn.execute("SELECT 1").fetchone()
+                database_ok = True
+            except sqlite3.Error:
+                database_ok = False
+            self._send(200 if database_ok else 503, {
+                "ok": database_ok,
+                "database": "ok" if database_ok else "unavailable",
                 "now": datetime.now().isoformat(timespec="seconds"),
                 "adminEnabled": bool(ADMIN_API_KEY),
             })
@@ -484,6 +513,9 @@ class LeaderboardHandler(BaseHTTPRequestHandler):
         self._send(200, {"ok": True, "scope": scope, "seed": seed, "entries": rows})
 
     def do_POST(self):
+        if not self._origin_allowed():
+            self._send(403, {"ok": False, "error": "origin not allowed"})
+            return
         parsed = urlparse(self.path)
         if parsed.path == "/api/admin/cleanup":
             payload, error = self._parse_json_body()
@@ -545,11 +577,20 @@ class LeaderboardHandler(BaseHTTPRequestHandler):
             self._send(400, {"ok": False, "error": error})
             return
 
-        entry = normalize_entry(payload)
+        try:
+            entry = normalize_entry(payload)
+        except (TypeError, ValueError, OverflowError):
+            self._send(400, {"ok": False, "error": "invalid score payload"})
+            return
+
+        # Use server time for duplicate detection; never trust a client-supplied timestamp.
+        entry["at"] = datetime.now().astimezone().isoformat(timespec="seconds")
+        client_ip = self.client_address[0] if self.client_address else "unknown"
+        rate_key = client_ip + ":" + entry["clientId"]
 
         prune_rate_limit_map()
         now_ts = time.time()
-        recent = LAST_POST_BY_CLIENT.get(entry["clientId"])
+        recent = LAST_POST_BY_CLIENT.get(rate_key)
         if recent is not None and now_ts - recent < POST_COOLDOWN_SECONDS:
             wait_seconds = max(0.0, POST_COOLDOWN_SECONDS - (now_ts - recent))
             self._send(429, {
@@ -564,7 +605,7 @@ class LeaderboardHandler(BaseHTTPRequestHandler):
             return
 
         insert_entry(entry)
-        LAST_POST_BY_CLIENT[entry["clientId"]] = now_ts
+        LAST_POST_BY_CLIENT[rate_key] = now_ts
         self._send(200, {"ok": True})
 
     def log_message(self, format, *args):
@@ -577,6 +618,7 @@ def main():
     server = ThreadingHTTPServer((HOST, PORT), LeaderboardHandler)
     print(f"Leaderboard API listening on http://{HOST}:{PORT}")
     print(f"SQLite DB: {DB_FILE}")
+    print(f"CORS allowed origins: {', '.join(sorted(CORS_ALLOW_ORIGINS)) or '(none)'}")
     print("GET  /api/health")
     print("GET  /api/leaderboard?scope=all")
     print("GET  /api/leaderboard?scope=daily&seed=20260728")
