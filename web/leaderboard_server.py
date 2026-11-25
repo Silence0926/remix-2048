@@ -21,6 +21,7 @@ PORT = int(os.getenv("PORT", "8787"))
 DB_FILE = os.getenv("LEADERBOARD_DB_FILE", os.path.join(os.path.dirname(__file__), "leaderboard.sqlite3"))
 LEGACY_JSON_FILE = os.getenv("LEADERBOARD_DATA_FILE", os.path.join(os.path.dirname(__file__), "leaderboard_data.json"))
 CORS_ALLOW_ORIGINS = {origin.strip() for origin in os.getenv("CORS_ALLOW_ORIGINS", os.getenv("CORS_ALLOW_ORIGIN", "https://silence0926.github.io")).split(",") if origin.strip()}
+DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 ADMIN_API_KEY = os.getenv("ADMIN_API_KEY", "").strip()
 MAX_STORE = 200
 MAX_RETURN = 5
@@ -42,13 +43,86 @@ def today_seed() -> int:
     return int(datetime.now().strftime("%Y%m%d"))
 
 
-def get_connection() -> sqlite3.Connection:
+class HybridRow(dict):
+    """Dictionary-style database row that also supports SQLite-style numeric indexes."""
+
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            return list(self.values())[key]
+        return super().__getitem__(key)
+
+
+def hybrid_row_factory(cursor):
+    column_names = [column.name for column in cursor.description]
+
+    def make_row(values):
+        return HybridRow(zip(column_names, values))
+
+    return make_row
+
+
+class PostgresConnection:
+    """Small compatibility adapter for the existing SQLite-shaped SQL layer."""
+
+    def __init__(self, database_url: str):
+        import psycopg
+        self.raw = psycopg.connect(database_url, row_factory=hybrid_row_factory)
+
+    def execute(self, sql: str, params=()):
+        return self.raw.execute(sql.replace("?", "%s"), params)
+
+    def commit(self):
+        self.raw.commit()
+
+    @property
+    def row_factory(self):
+        return None
+
+    @row_factory.setter
+    def row_factory(self, _value):
+        # psycopg already uses hybrid_row_factory for every cursor.
+        pass
+
+    def __enter__(self):
+        self.raw.__enter__()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        return self.raw.__exit__(exc_type, exc_value, traceback)
+
+
+def get_connection():
+    if DATABASE_URL:
+        return PostgresConnection(DATABASE_URL)
     conn = sqlite3.connect(DB_FILE, timeout=10)
     conn.execute("PRAGMA busy_timeout = 10000")
     return conn
 
 
 def ensure_db() -> None:
+    if DATABASE_URL:
+        with get_connection() as conn:
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS leaderboard_entries (
+                    id BIGSERIAL PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    score BIGINT NOT NULL,
+                    mode TEXT NOT NULL,
+                    size INTEGER NOT NULL,
+                    steps INTEGER NOT NULL,
+                    daily_seed BIGINT NOT NULL,
+                    at TEXT NOT NULL,
+                    client_id TEXT NOT NULL
+                )
+                """
+            )
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_entries_score_steps ON leaderboard_entries(score DESC, steps ASC)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_entries_daily_seed ON leaderboard_entries(daily_seed)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_entries_signature ON leaderboard_entries(name, score, mode, size, steps, daily_seed)")
+            conn.commit()
+        return
+
     db_directory = os.path.dirname(os.path.abspath(DB_FILE))
     os.makedirs(db_directory, exist_ok=True)
     with get_connection() as conn:
@@ -480,7 +554,7 @@ class LeaderboardHandler(BaseHTTPRequestHandler):
                 with get_connection() as conn:
                     conn.execute("SELECT 1").fetchone()
                 database_ok = True
-            except sqlite3.Error:
+            except Exception:
                 database_ok = False
             self._send(200 if database_ok else 503, {
                 "ok": database_ok,
@@ -617,7 +691,7 @@ def main():
     migrate_from_legacy_json_if_needed()
     server = ThreadingHTTPServer((HOST, PORT), LeaderboardHandler)
     print(f"Leaderboard API listening on http://{HOST}:{PORT}")
-    print(f"SQLite DB: {DB_FILE}")
+    print("Database: PostgreSQL" if DATABASE_URL else f"Database: SQLite ({DB_FILE})")
     print(f"CORS allowed origins: {', '.join(sorted(CORS_ALLOW_ORIGINS)) or '(none)'}")
     print("GET  /api/health")
     print("GET  /api/leaderboard?scope=all")
