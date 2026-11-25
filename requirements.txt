@@ -1,1 +1,2 @@
-# No third-party dependencies required for leaderboard_server.py
+# PostgreSQL driver for hosted leaderboard storage; SQLite remains built into Python.
+psycopg[binary]>=3.2,<4
