@@ -53,7 +53,7 @@ class HybridRow(dict):
 
 
 def hybrid_row_factory(cursor):
-    column_names = [column.name for column in cursor.description]
+    column_names = [column.name for column in (cursor.description or ())]
 
     def make_row(values):
         return HybridRow(zip(column_names, values))
