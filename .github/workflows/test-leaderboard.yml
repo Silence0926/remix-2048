@@ -1,0 +1,34 @@
+name: Leaderboard API Tests
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "web/leaderboard_server.py"
+      - "web/test_leaderboard_api.py"
+      - ".github/workflows/test-leaderboard.yml"
+  pull_request:
+    paths:
+      - "web/leaderboard_server.py"
+      - "web/test_leaderboard_api.py"
+      - ".github/workflows/test-leaderboard.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v6
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Compile API
+        run: python -m compileall -q web
+      - name: Run leaderboard API integration tests
+        run: python -m unittest discover -s web -p "test_*.py" -v
