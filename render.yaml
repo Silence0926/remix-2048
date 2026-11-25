@@ -8,5 +8,5 @@ services:
     envVars:
       - key: LEADERBOARD_DB_FILE
         value: /tmp/remix2048_leaderboard.sqlite3
-      - key: CORS_ALLOW_ORIGIN
-        value: "*"
+      - key: CORS_ALLOW_ORIGINS
+        value: "https://silence0926.github.io"
